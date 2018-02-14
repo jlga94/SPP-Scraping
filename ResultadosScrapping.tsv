@@ -1,0 +1,39 @@
+DNI	Nombre	AfiliadoSPPDesde	AFP	AfiliadoAFPDesde	FechaNacimiento	IdentificacionSPP	SituacionActual	TipoComision	FechaDevengueUltimoAporte	AporteVoluntarioAFP	AporteVoluntarioSinFin	AporteVoluntarioConFin	DateTime	EsAfiliadoSPP
+00001165	HUGO     LINGUIS  REATEGUI	19/01/2000	Integra	19/01/2000	14/01/1961	522931HLRGT4	Afiliado	Comisión/Flujo	11/2017	-	-	-	14-02-2018 15:38:44	True
+00001596	GUIDO     ESCOBAR  PEZO	26/07/1993	Integra	01/04/1997	31/10/1965	240441GEPOO6	Afiliado	Comisión/Flujo	12/2017	-	-	-	14-02-2018 15:39:12	True
+00001871	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:39:27	False
+00003832	MELITA   NORA   RUIZ  ACHO DE RAMIREZ	26/05/1999	Prima	01/12/2006	16/07/1956	506500MRAZO1	Afiliado	Com.Mixta/Saldo		-	-	-	14-02-2018 15:41:55	True
+00004290	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:42:40	False
+00005710	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:43:26	False
+00006329	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:44:11	False
+00006480	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:44:26	True
+00008945	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:46:39	False
+00008959	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:46:54	True
+00009780	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:47:23	True
+00010004	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:47:55	False
+00010884	NORA   ANGELICA   MACEDO  PACAYA	09/02/1999	Integra	09/02/1999	23/10/1961	525750NMPEA9	Afiliado	Comisión/Flujo	11/2015	-	-	-	14-02-2018 15:48:54	True
+00010938	JUAN   ERNESTO   PAZOS  LOPEZ	08/11/1995	Integra	01/05/1998	26/07/1959	517551JPLOE5	Afiliado	Comisión/Flujo	12/2017	-	-	-	14-02-2018 15:49:09	True
+00011129	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:49:23	True
+00011823	LUIS   ANTONIO   CAUPER  CAUPER	22/09/1993	Prima	01/12/2006	12/12/1958	215291LCCPP4	Afiliado	Comisión/Flujo	09/2017	-	-	-	14-02-2018 15:49:54	True
+00014143	ABNER   DANILO   TORRES  PEREZ	16/12/1993	Profuturo	13/09/1996	21/02/1960	219651ATPRE3	Afiliado	Com.Mixta/Saldo	12/2009	-	-	-	14-02-2018 15:51:39	True
+00014198	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:51:54	False
+00016305	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:53:11	False
+00016518	HUGO   ARTURO   LIMA  CARDENAS	18/06/1994	Prima	01/12/2006	09/06/1964	235351HLCAD5	Afiliado	Com.Mixta/Saldo	12/2017	-	-	-	14-02-2018 15:53:26	True
+00018260	HUGO   AMERICO   FLORES  VASQUEZ	18/02/2004	Profuturo	01/09/2013	16/05/1952	491281HFVRQ9	Afiliado	Com.Mixta/Saldo	10/2009	-	-	-	14-02-2018 15:55:08	True
+00019200	LUZ   ESTRELLITA   TUESTA  DE RUIZ	24/03/1994	Integra	01/01/2006	12/09/1960	221690LTPSD5	Afiliado	Comisión/Flujo	12/2017	-	-	-	14-02-2018 15:55:41	True
+00019552	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:56:14	False
+00019839	AHBRAN   MIGUEL   FLORES  SORIA	27/07/2000	Profuturo	01/09/2013	03/06/1965	538941AFSRI7	Afiliado	Comisión/Flujo	11/2017	-	-	-	14-02-2018 15:56:29	True
+00020502	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:56:45	False
+00021176	ARTURO     MACEDO  PAIMA	18/12/1996	Integra	01/03/1998	29/11/1961	526121AMPEM5	Afiliado	Com.Mixta/Saldo	12/2017	-	-	-	14-02-2018 15:57:02	True
+00022178	MAURO     LOPEZ  BARDALES	17/08/1993	Prima	01/12/2006	18/12/1957	211701MLBED0	Afiliado	Comisión/Flujo	12/2017	-	-	-	14-02-2018 15:57:50	True
+00022617	LUIS   ALBERTO   BRITTO  LA TORRE	03/11/1993	Prima	01/12/2006	07/02/1949	179341LBTTR5	Pens.Jubilacion	Com.Mixta/Saldo	/	-	-	-	14-02-2018 15:58:22	True
+00023253	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:58:52	False
+00023652	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:59:06	False
+00023986	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 15:59:21	True
+00026076	GERMAN     LIMA  PRADA	16/07/1993	Prima	01/12/2006	12/05/1958	213151GLPAD5	Afiliado	Comisión/Flujo	01/2018	-	-	-	14-02-2018 16:00:36	True
+00026264	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 16:00:53	False
+00026710	MOISES   IVAN   PEREIRA  NAVARRO	06/07/1993	Integra	06/07/1993	09/02/1963	230491MPNEA1	Afiliado	Com.Mixta/Saldo		-	-	-	14-02-2018 16:01:25	True
+00026877	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 16:02:10	False
+00027278	GERMAN     TUESTA  VELA	13/04/1996	Integra	01/03/2005	24/07/1963	532141GTVSA9	Afiliado	Comisión/Flujo	02/2016	-	-	-	14-02-2018 16:02:39	True
+00027596	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 16:03:08	False
+00027968	-	-	-	-	-	-	-	-	-	-	-	-	14-02-2018 16:03:24	False
