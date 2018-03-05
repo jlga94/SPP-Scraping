@@ -3,6 +3,10 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from contextlib import contextmanager
+from selenium.webdriver.support.expected_conditions import staleness_of
+
+
 
 import cv2
 from PIL import Image, ImageEnhance, ImageFilter
@@ -12,6 +16,10 @@ import re, time, datetime
 from bs4 import BeautifulSoup
 import csv, string
 
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
+from os import cpu_count
+
 browser = None
 url = "https://www.sbs.gob.pe/app/spp/Reporte_Sit_Prev/afil_existe.asp"
 columnsData = ['DNI','Nombre','AfiliadoSPPDesde','AFP','AfiliadoAFPDesde','FechaNacimiento','IdentificacionSPP','SituacionActual','TipoComision','FechaDevengueUltimoAporte',
@@ -20,11 +28,26 @@ columnsData = ['DNI','Nombre','AfiliadoSPPDesde','AFP','AfiliadoAFPDesde','Fecha
 alphabet = set(string.ascii_lowercase)
 alphabet = alphabet.union(set(string.punctuation))
 
-resultsScrappingTsvFile = open('ResultadosScrapping_4.tsv','w')
+resultsScrappingTsvFile = open('ResultadosScrapping_threads_v2_2.tsv','w')
 file_writer = csv.writer(resultsScrappingTsvFile, delimiter='\t', lineterminator='\n')
 file_writer.writerow(columnsData)
 
 #dnisPendingFile = open("DnisPendientes_2.txt",'w')
+
+class wait_for_page_load(object):
+
+    def __init__(self, browser):
+        self.browser = browser
+
+    def __enter__(self):
+        self.old_page = self.browser.find_element_by_tag_name('html')
+
+    def page_has_loaded(self):
+        new_page = self.browser.find_element_by_tag_name('html')
+        return new_page.id != self.old_page.id
+
+    def __exit__(self, *_):
+        wait_for(self.page_has_loaded)
 
 def cleanhtml(raw_html):
     cleanr = re.compile('<.*?>')
@@ -44,12 +67,12 @@ def readFile(filename):
 
 def getScreenShot(browser,dni):
 
-    filenameScreenShot = 'screenshot.png'
+    filenameScreenShot = 'screenshot_' + dni + '.png'
     browser.save_screenshot(filenameScreenShot)
     return filenameScreenShot
 
 def getCaptchaImages(filenameScreenShot,dni):
-    fileNameCaptchaA = 'captcha.jpg'
+    fileNameCaptchaA = 'captcha_' + dni + '.jpg'
 
     img = cv2.imread(filenameScreenShot, 0)
     crop_img = img[144:144 + 21, 165:165 + 86]
@@ -273,12 +296,55 @@ def DNIsToResearch(dnisWithCaptchaError,filename):
             f.write(dni + '\n')
 
 
+
+def downloader(dni):
+    print(dni)
+    options = Options()
+    options.add_argument("--headless")
+
+    browser = webdriver.Firefox(firefox_options=options)
+    browser.set_page_load_timeout(30)
+    isCaptchaNumberOk, result = scrappingOneDocument(browser, dni)
+    browser.quit()
+    if isCaptchaNumberOk:
+        return None
+    else:
+        print("Fallo DNI: " + dni)
+        return dni
+
+
+def main():
+    filename = 'dnis10k.txt'
+    dnis = readFile(filename)
+    print(dnis)
+    dnis = dnis[:20]
+
+    t0 = time.time()
+
+    with ThreadPoolExecutor(max_workers=cpu_count()*2) as executor:
+        futures = [executor.submit(downloader, dni) for dni in dnis]
+        dnisWithCaptchaError = []
+        for futureResult in as_completed(futures):
+            if futureResult.result():
+                dnisWithCaptchaError.append(futureResult.result())
+
+        print(dnisWithCaptchaError)
+
+        DNIsToResearch(dnisWithCaptchaError, "DnisPendientes_Threads_v2_2.txt")
+
+    t1 = time.time()
+    total_time = int(t1 - t0)
+    print("Tiempo total de ejecución: " + str(datetime.timedelta(seconds=total_time)))
+
+
+
+'''
 def main():
 
     filename = 'dnis10k.txt'
     dnis = readFile(filename)
     print(dnis)
-    dnis = dnis[:20]
+    dnis = dnis[:100]
 
     options = Options()
     options.add_argument("--headless")
@@ -314,6 +380,7 @@ def main():
     print(dnisWithCaptchaError)
     #writeTsvFile(resultScrapping, 'ResultadosScrapping.tsv')
     DNIsToResearch(dnisWithCaptchaError, "DnisPendientes_4.txt")
+'''
 
 
 try:

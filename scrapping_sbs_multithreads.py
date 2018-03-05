@@ -12,6 +12,10 @@ import re, time, datetime
 from bs4 import BeautifulSoup
 import csv, string
 
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
+from os import cpu_count
+
 browser = None
 url = "https://www.sbs.gob.pe/app/spp/Reporte_Sit_Prev/afil_existe.asp"
 columnsData = ['DNI','Nombre','AfiliadoSPPDesde','AFP','AfiliadoAFPDesde','FechaNacimiento','IdentificacionSPP','SituacionActual','TipoComision','FechaDevengueUltimoAporte',
@@ -20,7 +24,7 @@ columnsData = ['DNI','Nombre','AfiliadoSPPDesde','AFP','AfiliadoAFPDesde','Fecha
 alphabet = set(string.ascii_lowercase)
 alphabet = alphabet.union(set(string.punctuation))
 
-resultsScrappingTsvFile = open('ResultadosScrapping_4.tsv','w')
+resultsScrappingTsvFile = open('ResultadosScrapping_threads.tsv','w')
 file_writer = csv.writer(resultsScrappingTsvFile, delimiter='\t', lineterminator='\n')
 file_writer.writerow(columnsData)
 
@@ -273,12 +277,73 @@ def DNIsToResearch(dnisWithCaptchaError,filename):
             f.write(dni + '\n')
 
 
+
+def downloader(dnis):
+    options = Options()
+    options.add_argument("--headless")
+
+    maxTriesToIterate = 1
+    actualIteration = 0
+
+    # resultScrapping = []
+    dnisWithCaptchaError = None
+    #t0 = time.time()
+    while (actualIteration < maxTriesToIterate and len(dnis) > 0):
+        dnisWithCaptchaError = []
+
+        for i in range(len(dnis)):
+            print("Corrida: " + str(actualIteration) + " - Iteracion: " + str(i))
+            browser = webdriver.Firefox(firefox_options=options)
+            browser.set_page_load_timeout(30)
+            isCaptchaNumberOk, result = scrappingOneDocument(browser, dnis[i])
+            browser.quit()
+            if not (isCaptchaNumberOk):
+                dnisWithCaptchaError.append(dnis[i])
+
+        #t1 = time.time()
+        #total_time = int(t1 - t0)
+        #print("Tiempo Recurrido en Corrida " + str(actualIteration) + ": " + str(datetime.timedelta(seconds=total_time)))
+
+        print("Cantidad de Dnis pendientes: " + str(len(dnisWithCaptchaError)))
+        actualIteration += 1
+        dnis = dnisWithCaptchaError
+
+    #t1 = time.time()
+    #total_time = int(t1 - t0)
+    #print("Tiempo total de ejecución: " + str(datetime.timedelta(seconds=total_time)))
+    return dnisWithCaptchaError
+
+
+def main():
+    filename = 'dnis10k.txt'
+    dnis = readFile(filename)
+    print(dnis)
+    dnis_1 = dnis[:50]
+    dnis_2 = dnis[50:100]
+    dnis_3 = dnis[100:150]
+    dnis_4 = dnis[150:200]
+    dnis_complete = [dnis_1,dnis_2,dnis_3,dnis_4]
+
+    t0 = time.time()
+
+    with ThreadPoolExecutor(max_workers=cpu_count()) as executor:
+        futures = [executor.submit(downloader, dnis_index) for dnis_index in dnis_complete]
+        for future in as_completed(futures):
+            print(future)
+
+    t1 = time.time()
+    total_time = int(t1 - t0)
+    print("Tiempo total de ejecución: " + str(datetime.timedelta(seconds=total_time)))
+
+
+
+'''
 def main():
 
     filename = 'dnis10k.txt'
     dnis = readFile(filename)
     print(dnis)
-    dnis = dnis[:20]
+    dnis = dnis[:100]
 
     options = Options()
     options.add_argument("--headless")
@@ -314,6 +379,7 @@ def main():
     print(dnisWithCaptchaError)
     #writeTsvFile(resultScrapping, 'ResultadosScrapping.tsv')
     DNIsToResearch(dnisWithCaptchaError, "DnisPendientes_4.txt")
+'''
 
 
 try:

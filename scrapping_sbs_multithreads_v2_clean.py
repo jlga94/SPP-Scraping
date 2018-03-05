@@ -3,6 +3,8 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from contextlib import contextmanager
+from selenium.webdriver.support.expected_conditions import staleness_of
 
 import cv2
 from PIL import Image, ImageEnhance, ImageFilter
@@ -10,7 +12,13 @@ import pytesseract
 from time import sleep
 import re, time, datetime
 from bs4 import BeautifulSoup
-import csv, string
+import csv, string, sys
+import numpy as np
+
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
+from os import cpu_count
+import os
 
 browser = None
 url = "https://www.sbs.gob.pe/app/spp/Reporte_Sit_Prev/afil_existe.asp"
@@ -20,11 +28,22 @@ columnsData = ['DNI','Nombre','AfiliadoSPPDesde','AFP','AfiliadoAFPDesde','Fecha
 alphabet = set(string.ascii_lowercase)
 alphabet = alphabet.union(set(string.punctuation))
 
-resultsScrappingTsvFile = open('ResultadosScrapping_4.tsv','w')
-file_writer = csv.writer(resultsScrappingTsvFile, delimiter='\t', lineterminator='\n')
-file_writer.writerow(columnsData)
 
-#dnisPendingFile = open("DnisPendientes_2.txt",'w')
+outputFileResults = 'ResultadosScrapping_threads_v2_3.tsv'
+outputFileDNIsToReSearch = 'DnisPendientes_Threads_v2_3.txt'
+
+
+with open(outputFileResults,'w') as f:
+    file_writer = csv.writer(f, delimiter='\t', lineterminator='\n')
+    file_writer.writerow(columnsData)
+
+
+def wait_for_page_load(browser, timeout=30):
+    old_page = browser.find_element_by_tag_name('html')
+    yield
+    WebDriverWait(browser, timeout).until(
+        staleness_of(old_page)
+    )
 
 def cleanhtml(raw_html):
     cleanr = re.compile('<.*?>')
@@ -40,38 +59,57 @@ def readFile(filename):
     with open(filename) as f:
         dnis = list(f.read().splitlines())
         dnis.pop(0)
-        return dnis
+        return list(set(dnis))
 
 def getScreenShot(browser,dni):
-
-    filenameScreenShot = 'screenshot.png'
+    #Take a Screenshot in the Browser and saves it in a file
+    
+    filenameScreenShot = 'screenshot_' + dni + '.png'
     browser.save_screenshot(filenameScreenShot)
     return filenameScreenShot
 
 def getCaptchaImages(filenameScreenShot,dni):
-    fileNameCaptchaA = 'captcha.jpg'
+    #Crop the Screenshot, to only have the Captcha area
 
+    fileNameCaptcha = 'captcha_' + dni + '.jpg'
     img = cv2.imread(filenameScreenShot, 0)
     crop_img = img[144:144 + 21, 165:165 + 86]
-    cv2.imwrite(fileNameCaptchaA, crop_img)
+    cv2.imwrite(fileNameCaptcha, crop_img)
 
-    return fileNameCaptchaA
+    return fileNameCaptcha
 
 def preprocessImage(fileNameCaptcha):
-    fileNameCaptchaSplitted = fileNameCaptcha.split('.')
-    fileNameGrayCaptcha = fileNameCaptchaSplitted[0] + '_Gray.' + fileNameCaptchaSplitted[1]
+    #Process the Image to make it gray for a better application of Pytesseract
+
     image = cv2.imread(fileNameCaptcha)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-    cv2.imwrite(fileNameGrayCaptcha, gray)
-    return fileNameGrayCaptcha
+    gray = cv2.bitwise_not(gray)
+    
+    kernel = np.ones((2, 1), np.uint8)
+
+    img_erosion = cv2.erode(gray, kernel, iterations=1)
+    img_dilation = cv2.dilate(img_erosion, kernel, iterations=1)
+
+    cv2.imwrite(fileNameCaptcha, img_dilation)
+    return fileNameCaptcha
 
 def decodeNumberInImage(fileNameGrayCaptcha):
+    #Detects the number in the image using Pytesseract
+
     im = Image.open(fileNameGrayCaptcha)
-    enhancer = ImageEnhance.Contrast(im)
-    im = enhancer.enhance(50)
-    numberInCaptcha = pytesseract.image_to_string(im, config='0123456789')
+    #enhancer = ImageEnhance.Contrast(im)
+    #im = enhancer.enhance(5)
+    numberInCaptcha = pytesseract.image_to_string(im, config='--psm 10 --eom 3 -c tessedit_char_whitelist=0123456789')
     return numberInCaptcha.replace(" ", "")
+
+def deleteImagesFiles(dni):
+	filenameScreenShot = 'screenshot_' + dni + '.png'
+	fileNameCaptcha = 'captcha_' + dni + '.jpg'
+	os.remove(filenameScreenShot)
+	os.remove(fileNameCaptcha)
+
+
 
 def extractAportesVoluntarios(html_source):
     html_cutted = re.findall('Registra Aportes Voluntarios(.*?)I M P O R T A N T E</td>', html_source, flags=re.S)
@@ -96,7 +134,7 @@ def extractAportesVoluntarios(html_source):
 
 
 def getResultsInPage(browser,html_source,results):
-    # 7. Getting result
+    #Extract the Data in the HTML
     relevantData = browser.find_elements_by_class_name('APLI_txtActualizado_Rep')
 
     #Puede que el orden de datos cambie, tener cuidado con esto
@@ -128,39 +166,12 @@ def isCaptchaOK(html_source):
     else:
         return True
 
-    '''
-    captchaBlockTextList = re.findall('<td class="APLI_subtitulo2"(.*?)</td>', html_source, flags=re.S)
-
-    if len(captchaBlockTextList) == 0:
-        return True
-    else:
-        textInBlock = captchaBlockTextList[0]
-        if "imagen no coincide".lower() in textInBlock.lower():
-            return False
-        else:
-            return True
-    '''
-
 def isAffiliated(html_source):
     if "No hay resultado".lower() in html_source.lower() or "No se encuentra".lower() in html_source.lower():
         return False
     else:
         #print("Existe Tag y si esta afiliado - solo por si acaso")
         return True
-
-    '''
-    blockTextList = re.findall('<td class="APLI_subtitulo2"(.*?)</td>', html_source, flags=re.S)
-
-    if len(blockTextList) == 0:
-        return True
-    else:
-        textInBlock = blockTextList[0]
-        if "No hay resultado".lower() in textInBlock.lower():
-            return False
-        else:
-            print("Existe Tag y si esta afiliado - solo por si acaso")
-            return True
-    '''
 
 
 def scrappingOneDocument(browser,dni):
@@ -179,6 +190,8 @@ def scrappingOneDocument(browser,dni):
 
     numberInCaptcha = decodeNumberInImage(fileNameGrayCaptcha)
     print('numberInCaptcha: ' + str(numberInCaptcha))
+
+    deleteImagesFiles(dni)
 
     isCaptchaNumberOk = True
     results = {}
@@ -203,8 +216,9 @@ def scrappingOneDocument(browser,dni):
     cmdEnviar = browser.find_element_by_name("cmdEnviar")
     cmdEnviar.click()
 
-    html_source = browser.page_source
+    #with wait_for_page_load(browser, timeout=15):
 
+    html_source = browser.page_source
     if isCaptchaOK(html_source):
         results['DNI'] = dni
         results['Nombre'] = '-'
@@ -252,7 +266,10 @@ def addRowTsvFile(result):
     row = []
     for column in columnsData:
         row.append(result[column])
-    file_writer.writerow(row)
+
+    with open(outputFileResults, 'a') as f:
+        file_writer = csv.writer(f, delimiter='\t', lineterminator='\n')
+        file_writer.writerow(row)
 
 
 def writeTsvFile(resultScrapping,filename):
@@ -273,53 +290,48 @@ def DNIsToResearch(dnisWithCaptchaError,filename):
             f.write(dni + '\n')
 
 
-def main():
 
-    filename = 'dnis10k.txt'
-    dnis = readFile(filename)
-    print(dnis)
-    dnis = dnis[:20]
 
+def downloader(dni):
+    print(dni)
     options = Options()
     options.add_argument("--headless")
 
-    maxTriesToIterate = 1
-    actualIteration = 0
+    profile = webdriver.FirefoxProfile()
+    profile.set_preference("dom.disable_beforeunload", True)
 
-    #resultScrapping = []
-    dnisWithCaptchaError = None
+    browser = webdriver.Firefox(firefox_options=options,firefox_profile = profile)
+    browser.set_page_load_timeout(30)
+    isCaptchaNumberOk, result = scrappingOneDocument(browser, dni)
+    browser.quit()
+    if isCaptchaNumberOk:
+        return None
+    else:
+        print("Fallo DNI: " + dni)
+        with open(outputFileDNIsToReSearch, 'a') as f:
+            f.write(dni + '\n')
+
+        return dni
+
+
+def main():
+    filename = 'dnis10k.txt'
+    dnis = readFile(filename)
+    print(dnis)
+    #dnis = dnis[:100]
+
     t0 = time.time()
-    while(actualIteration < maxTriesToIterate and len(dnis) > 0):
-        dnisWithCaptchaError = []
 
-        for i in range(len(dnis)):
-            print("Corrida: " + str(actualIteration) + " - Iteracion: " + str(i))
-            browser = webdriver.Firefox(firefox_options=options)
-            browser.set_page_load_timeout(30)
-            isCaptchaNumberOk,result = scrappingOneDocument(browser,dnis[i])
-            browser.quit()
-            if not(isCaptchaNumberOk):
-                dnisWithCaptchaError.append(dnis[i])
-
-        t1 = time.time()
-        total_time = int(t1 - t0)
-        print("Tiempo Recurrido en Corrida " + str(actualIteration) + ": " + str(datetime.timedelta(seconds=total_time)))
-        print("Cantidad de Dnis pendientes: " + str(len(dnisWithCaptchaError)))
-        actualIteration += 1
-        dnis = dnisWithCaptchaError
+    with ThreadPoolExecutor(max_workers=cpu_count()) as executor:
+        futures = [executor.submit(downloader, dni) for dni in dnis]
 
     t1 = time.time()
     total_time = int(t1 - t0)
     print("Tiempo total de ejecución: " + str(datetime.timedelta(seconds=total_time)))
-    print(dnisWithCaptchaError)
-    #writeTsvFile(resultScrapping, 'ResultadosScrapping.tsv')
-    DNIsToResearch(dnisWithCaptchaError, "DnisPendientes_4.txt")
 
 
 try:
     main()
-    resultsScrappingTsvFile.close()
-    #dnisPendingFile.close()
 except:
-    resultsScrappingTsvFile.close()
-    #dnisPendingFile.close()
+    print("Unexpected error:", sys.exc_info()[0])
+    raise
