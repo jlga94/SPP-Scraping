@@ -333,15 +333,28 @@ def downloader(dni):
     browser = webdriver.Firefox(firefox_options=options,firefox_profile = profile)
     browser.set_page_load_timeout(30)
     isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
-    browser.quit()
+
     if isCaptchaNumberOk:
+        browser.quit()
         return None
     else:
         print("Fallo DNI: " + dni)
-        with open(outputFileDNIsToReSearch, 'a') as f:
-            f.write(dni + '\n')
+        isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
+        if isCaptchaNumberOk:
+            browser.quit()
+            return None
+        else:
+            print("Fallo DNI: " + dni)
+            isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
+            browser.quit()
+            if isCaptchaNumberOk:
+                return None
+            else:
+                print("Fallo DNI: " + dni)
+                with open(outputFileDNIsToReSearch, 'a') as f:
+                    f.write(dni + '\n')
 
-        return dni
+                    return dni
 
 
 def main():
