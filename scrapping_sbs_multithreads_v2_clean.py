@@ -1,10 +1,12 @@
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from contextlib import contextmanager
 from selenium.webdriver.support.expected_conditions import staleness_of
+import selenium
 
 import cv2
 from PIL import Image, ImageEnhance, ImageFilter
@@ -29,8 +31,8 @@ alphabet = set(string.ascii_lowercase)
 alphabet = alphabet.union(set(string.punctuation))
 
 
-outputFileResults = 'ResultadosScrapping_threads_v2_3.tsv'
-outputFileDNIsToReSearch = 'DnisPendientes_Threads_v2_3.txt'
+outputFileResults = 'ResultadosScraping_SBS_Clean.tsv'
+outputFileDNIsToReSearch = 'DnisPendientes_SBS_Clean.txt'
 
 
 with open(outputFileResults,'w') as f:
@@ -55,17 +57,20 @@ def cleanText(text):
     cleantext = re.sub(cleanr, ' ', text)
     return cleantext
 
+def cleanNameText(text):
+    text = " ".join(text.split())
+    return ''.join(character for character in text if character.isalpha() or character == ' ')
+
 def readFile(filename):
     with open(filename) as f:
         dnis = list(f.read().splitlines())
         dnis.pop(0)
         return list(set(dnis))
 
-def getScreenShot(browser,dni):
+def getScreenShotName(dni):
     #Take a Screenshot in the Browser and saves it in a file
     
     filenameScreenShot = 'screenshot_' + dni + '.png'
-    browser.save_screenshot(filenameScreenShot)
     return filenameScreenShot
 
 def getCaptchaImages(filenameScreenShot,dni):
@@ -77,6 +82,11 @@ def getCaptchaImages(filenameScreenShot,dni):
     cv2.imwrite(fileNameCaptcha, crop_img)
 
     return fileNameCaptcha
+
+def getCaptchaFileName(dni):
+    fileNameCaptcha = 'captcha_' + dni + '.png'
+    return fileNameCaptcha
+
 
 def preprocessImage(fileNameCaptcha):
     #Process the Image to make it gray for a better application of Pytesseract
@@ -105,10 +115,13 @@ def decodeNumberInImage(fileNameGrayCaptcha):
 
 def deleteImagesFiles(dni):
 	filenameScreenShot = 'screenshot_' + dni + '.png'
-	fileNameCaptcha = 'captcha_' + dni + '.jpg'
+	fileNameCaptcha = 'captcha_' + dni + '.png'
 	os.remove(filenameScreenShot)
 	os.remove(fileNameCaptcha)
 
+def deleteImagesFiles_v2(dni):
+	fileNameCaptcha = 'captcha_' + dni + '.png'
+	os.remove(fileNameCaptcha)
 
 
 def extractAportesVoluntarios(html_source):
@@ -133,16 +146,23 @@ def extractAportesVoluntarios(html_source):
         print("No hay Aportes Voluntarios")
 
 
-def getResultsInPage(browser,html_source,results):
-    #Extract the Data in the HTML
-    relevantData = browser.find_elements_by_class_name('APLI_txtActualizado_Rep')
+def getResultsInPage(html_source,results):
+    # Extract the Data in the HTML
+    soup = BeautifulSoup(html_source, 'lxml')
+    relevantData = soup.find_all("td", {"class": "APLI_txtActualizado_Rep"})
+
+
+    #relevantData = browser.find_elements_by_class_name('APLI_txtActualizado_Rep')
 
     #Puede que el orden de datos cambie, tener cuidado con esto
     for indexRelevantData in range(2,len(relevantData)):
-        results[columnsData[indexRelevantData]] = relevantData[indexRelevantData].text
+        results[columnsData[indexRelevantData]] = relevantData[indexRelevantData].text.strip()
 
-    for x in browser.find_elements_by_class_name('APLI_txtActualizado'):
-        results['Nombre'] = x.text.strip()
+    name_element = soup.find("td", {"class": "APLI_txtActualizado"}).text.strip()
+    results['Nombre'] = cleanNameText(name_element)
+
+    #for x in browser.find_elements_by_class_name('APLI_txtActualizado'):
+    #    results['Nombre'] = x.text.strip()
 
     if "Registra Aportes Voluntarios" in html_source:
         print("Hay Aportes Voluntarios")
@@ -174,9 +194,9 @@ def isAffiliated(html_source):
         return True
 
 
-def scrappingOneDocument(browser,dni):
+def scrapingOneDocument(browser,dni):
     browser.get(url)
-    delay = 10 #seconds
+    delay = 25 #seconds
 
     try:
         myElem = WebDriverWait(browser, delay).until(EC.presence_of_element_located((By.NAME, 'cmdEnviar')))
@@ -184,14 +204,25 @@ def scrappingOneDocument(browser,dni):
         print("Se excedió el tiempo de espera")
         resultsScrappingTsvFile.close()
 
-    filenameScreenShot = getScreenShot(browser, dni)
-    fileNameCaptcha = getCaptchaImages(filenameScreenShot, dni)
+    captchaElement = browser.find_element_by_xpath("//img[@alt='This Is CAPTCHA Image']")
+
+    fileNameCaptcha = getCaptchaFileName(dni)
+
+    captchaElement.screenshot(fileNameCaptcha)
+
+    #filenameScreenShot = getScreenShotName(dni)
+
+    #captchaElement.screenshot(fileNameCaptcha)
+
+    #browser.save_screenshot(filenameScreenShot)
+
+    #fileNameCaptcha = getCaptchaImages(filenameScreenShot, dni)
     fileNameGrayCaptcha = preprocessImage(fileNameCaptcha)
 
     numberInCaptcha = decodeNumberInImage(fileNameGrayCaptcha)
     print('numberInCaptcha: ' + str(numberInCaptcha))
 
-    deleteImagesFiles(dni)
+    deleteImagesFiles_v2(dni)
 
     isCaptchaNumberOk = True
     results = {}
@@ -215,8 +246,9 @@ def scrappingOneDocument(browser,dni):
     # 6. Sending form
     cmdEnviar = browser.find_element_by_name("cmdEnviar")
     cmdEnviar.click()
-
     #with wait_for_page_load(browser, timeout=15):
+
+    #sleep(5)
 
     html_source = browser.page_source
     if isCaptchaOK(html_source):
@@ -238,7 +270,8 @@ def scrappingOneDocument(browser,dni):
 
         if isAffiliated(html_source):
             results['EsAfiliadoSPP'] = 'True'
-            results = getResultsInPage(browser, html_source, results)
+            results = getResultsInPage(html_source, results)
+            #results = getResultsInPage(browser, html_source, results)
         else:
             results['EsAfiliadoSPP'] = 'False'
 
@@ -289,9 +322,6 @@ def DNIsToResearch(dnisWithCaptchaError,filename):
         for dni in dnisWithCaptchaError:
             f.write(dni + '\n')
 
-
-
-
 def downloader(dni):
     print(dni)
     options = Options()
@@ -302,7 +332,7 @@ def downloader(dni):
 
     browser = webdriver.Firefox(firefox_options=options,firefox_profile = profile)
     browser.set_page_load_timeout(30)
-    isCaptchaNumberOk, result = scrappingOneDocument(browser, dni)
+    isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
     browser.quit()
     if isCaptchaNumberOk:
         return None
@@ -315,7 +345,7 @@ def downloader(dni):
 
 
 def main():
-    filename = 'dnis10k.txt'
+    filename = 'data.txt'
     dnis = readFile(filename)
     print(dnis)
     #dnis = dnis[:100]
