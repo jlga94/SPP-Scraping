@@ -64,7 +64,7 @@ def cleanNameText(text):
 def readFile(filename):
     with open(filename) as f:
         dnis = list(f.read().splitlines())
-        dnis.pop(0)
+        #dnis.pop(0)
         return list(set(dnis))
 
 def getScreenShotName(dni):
@@ -151,7 +151,6 @@ def getResultsInPage(html_source,results):
     soup = BeautifulSoup(html_source, 'lxml')
     relevantData = soup.find_all("td", {"class": "APLI_txtActualizado_Rep"})
 
-
     #relevantData = browser.find_elements_by_class_name('APLI_txtActualizado_Rep')
 
     #Puede que el orden de datos cambie, tener cuidado con esto
@@ -210,13 +209,6 @@ def scrapingOneDocument(browser,dni):
 
     captchaElement.screenshot(fileNameCaptcha)
 
-    #filenameScreenShot = getScreenShotName(dni)
-
-    #captchaElement.screenshot(fileNameCaptcha)
-
-    #browser.save_screenshot(filenameScreenShot)
-
-    #fileNameCaptcha = getCaptchaImages(filenameScreenShot, dni)
     fileNameGrayCaptcha = preprocessImage(fileNameCaptcha)
 
     numberInCaptcha = decodeNumberInImage(fileNameGrayCaptcha)
@@ -231,7 +223,6 @@ def scrapingOneDocument(browser,dni):
         print("El Captcha tiene letras: " + str(numberInCaptcha))
         isCaptchaNumberOk = False
         return isCaptchaNumberOk, results
-
 
     # 4. Getting form
     num_doc = browser.find_element_by_id("num_doc")
@@ -290,7 +281,6 @@ def scrapingOneDocument(browser,dni):
     else:
         print("No se realizó correctamente el Captcha: " + str(numberInCaptcha))
         isCaptchaNumberOk = False
-        #dnisPendingFile.write(dni + '\n')
 
     return isCaptchaNumberOk,results
 
@@ -332,40 +322,31 @@ def downloader(dni):
 
     browser = webdriver.Firefox(firefox_options=options,firefox_profile = profile)
     browser.set_page_load_timeout(30)
-    isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
 
-    if isCaptchaNumberOk:
-        browser.quit()
-        return None
-    else:
-        print("Fallo DNI: " + dni)
+    numTries = 3
+    for actualTry in range(numTries):
+        print("DNI: " + dni + " - Intento: " + str(actualTry + 1))
         isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
         if isCaptchaNumberOk:
             browser.quit()
             return None
         else:
             print("Fallo DNI: " + dni)
-            isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
-            browser.quit()
-            if isCaptchaNumberOk:
-                return None
-            else:
-                print("Fallo DNI: " + dni)
-                with open(outputFileDNIsToReSearch, 'a') as f:
-                    f.write(dni + '\n')
 
-                    return dni
+    browser.quit()
+    with open(outputFileDNIsToReSearch, 'a') as f:
+        f.write(dni + '\n')
+        return dni
 
 
 def main():
-    filename = 'data.txt'
+    filename = 'DnisPendientes_SBS_Clean.txt'
     dnis = readFile(filename)
     print(dnis)
-    #dnis = dnis[:100]
 
     t0 = time.time()
 
-    with ThreadPoolExecutor(max_workers=cpu_count()) as executor:
+    with ThreadPoolExecutor(max_workers=1) as executor:
         futures = [executor.submit(downloader, dni) for dni in dnis]
 
     t1 = time.time()

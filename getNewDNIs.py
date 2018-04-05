@@ -5,13 +5,13 @@ def readFile(filename):
 
 def writeFile(filename,dnisPendientes):
     with open(filename,"w") as f:
-        f.write("DNIS\n")
+        #f.write("DNIS\n")
         for dni in sorted(dnisPendientes):
             f.write(dni + "\n")
 
 
-dnisScrapeados = set(readFile("dnisScraping_3.txt"))
-dnisTotal = set(readFile("data.txt"))
+dnisScrapeados = set(readFile("dnisScraping_MUESTREO_2.txt"))
+dnisTotal = set(readFile("Muestreo_DNIS_05_04_18.txt"))
 
 dnisPendientes = dnisTotal.difference(dnisScrapeados)
-writeFile("dnisPendientes_15.txt",dnisPendientes)
+writeFile("Muestreo_DNIS_05_04_18_v3.txt",dnisPendientes)
