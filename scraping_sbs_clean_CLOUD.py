@@ -49,6 +49,11 @@ with open(outputFileResults,'w') as f:
     file_writer.writerow(columnsData)
 
 
+class BanException(Exception):
+    def __init__(self):
+        Exception.__init__(self,"IP baneada")
+
+
 def getProxies():
     # Retrieve latest proxies
     proxies_req = Request('https://www.sslproxies.org/')
@@ -245,10 +250,18 @@ def scrapingOneDocument(browser,dni):
     isCaptchaNumberOk = True
     results = {}
 
+    if numberInCaptcha == '':
+        raise BanException()
+
     if haveLettersInCaptcha(numberInCaptcha):
         print("El Captcha tiene letras: " + str(numberInCaptcha))
         isCaptchaNumberOk = False
         return isCaptchaNumberOk, results
+    elif len(numberInCaptcha) != 4:
+        print("El Captcha tiene longitud diferente de 4: " + str(numberInCaptcha))
+        isCaptchaNumberOk = False
+        return isCaptchaNumberOk, results
+
 
     # 4. Getting form
     num_doc = browser.find_element_by_id("num_doc")
@@ -361,23 +374,29 @@ def downloader(dni,proxy):
 
     profile.set_preference("browser.tabs.remote.force-enable", False)
 
-    browser = webdriver.Firefox(firefox_options=options,firefox_profile = profile,proxy=proxy)
-    browser.set_page_load_timeout(30)
+    try:
+        browser = webdriver.Firefox(firefox_options=options,firefox_profile = profile,proxy=proxy)
+        browser.set_page_load_timeout(60)
 
-    numTries = 10
-    for actualTry in range(numTries):
-        print("DNI: " + dni + " - Intento: " + str(actualTry + 1))
-        isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
-        if isCaptchaNumberOk:
-            browser.quit()
-            return None
-        else:
-            print("Fallo DNI: " + dni)
+        numTries = 10
+        for actualTry in range(numTries):
+            print("DNI: " + dni + " - Intento: " + str(actualTry + 1))
+            isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
+            if isCaptchaNumberOk:
+                browser.quit()
+                return None
+            else:
+                print("Fallo DNI: " + dni)
 
-    browser.quit()
-    with open(outputFileDNIsToReSearch, 'a') as f:
-        f.write(dni + '\n')
-        return dni
+        browser.quit()
+        with open(outputFileDNIsToReSearch, 'a') as f:
+            f.write(dni + '\n')
+            return dni
+    except BanException:
+        browser.quit()
+        raise BanException()
+    except:
+        browser.quit()
 
 
 def main():
@@ -385,7 +404,7 @@ def main():
     dnis = readFile(filename)
     #print(dnis)
 
-    dnis = dnis[:1000]
+    dnis = dnis[70000:75000]
 
 
     getProxies()
@@ -417,8 +436,6 @@ def main():
             proxy_index = random_proxy()
             proxy = proxies[proxy_index]
             dnis.append(dni)
-
-
 
     t1 = time.time()
     total_time = int(t1 - t0)
