@@ -404,7 +404,7 @@ def main():
     dnis = readFile(filename)
     #print(dnis)
 
-    dnis = dnis[70000:75000]
+    dnis = dnis[20000:25000]
 
 
     getProxies()
@@ -433,8 +433,6 @@ def main():
         except: # If error, delete this proxy and find another one
             del proxies[proxy_index]
             print('Proxy ' + proxy['ip'] + ':' + proxy['port'] + ' deleted.')
-            proxy_index = random_proxy()
-            proxy = proxies[proxy_index]
             dnis.append(dni)
 
     t1 = time.time()
