@@ -383,9 +383,9 @@ def downloader(dni,proxy):
 def main():
     filename = 'TOTAL_DNIS.txt'
     dnis = readFile(filename)
-    print(dnis)
+    #print(dnis)
 
-    #dnis = dnis[:5000]
+    dnis = dnis[:1000]
 
 
     getProxies()
@@ -400,7 +400,8 @@ def main():
     #proxy = proxies[proxy_index]
     #downloader(dnis[0],proxy)
 
-    for dni in dnis:
+    while dnis:
+        dni = dnis.pop(random.randint(0, len(dnis) - 1))
         sleep(random.randint(5, 15))
 
         if len(proxies) == 0:
@@ -415,6 +416,7 @@ def main():
             print('Proxy ' + proxy['ip'] + ':' + proxy['port'] + ' deleted.')
             proxy_index = random_proxy()
             proxy = proxies[proxy_index]
+            dnis.append(dni)
 
 
 
