@@ -321,23 +321,26 @@ def downloader(dni):
 
     profile.set_preference("browser.tabs.remote.force-enable", False)
 
-    browser = webdriver.Firefox(firefox_options=options,firefox_profile = profile)
-    browser.set_page_load_timeout(30)
+    try:
+        browser = webdriver.Firefox(firefox_options=options,firefox_profile = profile)
+        browser.set_page_load_timeout(30)
 
-    numTries = 10
-    for actualTry in range(numTries):
-        print("DNI: " + dni + " - Intento: " + str(actualTry + 1))
-        isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
-        if isCaptchaNumberOk:
-            browser.quit()
-            return None
-        else:
-            print("Fallo DNI: " + dni)
+        numTries = 10
+        for actualTry in range(numTries):
+            print("DNI: " + dni + " - Intento: " + str(actualTry + 1))
+            isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
+            if isCaptchaNumberOk:
+                browser.quit()
+                return None
+            else:
+                print("Fallo DNI: " + dni)
 
-    browser.quit()
-    with open(outputFileDNIsToReSearch, 'a') as f:
-        f.write(dni + '\n')
-        return dni
+        browser.quit()
+        with open(outputFileDNIsToReSearch, 'a') as f:
+            f.write(dni + '\n')
+            return dni
+    except:
+        browser.quit()
 
 
 def main():
