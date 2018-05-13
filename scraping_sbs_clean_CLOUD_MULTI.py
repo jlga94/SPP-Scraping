@@ -439,20 +439,21 @@ def main():
     iterationMultiprocessing = 1
     with multiprocessing.Pool(24) as p:
 
-        print("iterationMultiprocessing: "+ str(iterationMultiprocessing))
-        dnisToScrap = dnis[:200]
+    	while dnis:
+	        print("iterationMultiprocessing: "+ str(iterationMultiprocessing))
+	        dnisToScrap = dnis[:200]
 
-        dnisScraped = set(p.map(processWork,dnisToScrap))
-        if None in dnisScraped:
-            dnisScraped.remove(None)
+	        dnisScraped = set(p.map(processWork,dnisToScrap))
+	        if None in dnisScraped:
+	            dnisScraped.remove(None)
 
-        dnis = list(set(dnis).difference(dnisScraped))
+	        dnis = list(set(dnis).difference(dnisScraped))
 
-        os.system('pkill firefox')
-        os.system('pkill geckodriver')
+	        os.system('pkill firefox')
+	        os.system('pkill geckodriver')
 
-        sleep((iterationMultiprocessing % 10) * 60)
-        iterationMultiprocessing += 1
+	        sleep((iterationMultiprocessing % 10) * 60)
+	        iterationMultiprocessing += 1
 
 
     t1 = time.time()
