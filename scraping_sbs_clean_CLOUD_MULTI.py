@@ -228,6 +228,7 @@ def isAffiliated(html_source):
 
 
 def scrapingOneDocument(browser,dni):
+    sleep(random.randint(3, 5))
     browser.get(url)
     delay = 25 #seconds
 
@@ -381,20 +382,20 @@ def downloader(dni,proxy):
         browser = webdriver.Firefox(firefox_options=options,firefox_profile = profile,proxy=proxy)
         browser.set_page_load_timeout(60)
 
-        numTries = 10
+        numTries = 15
         for actualTry in range(numTries):
             print("DNI: " + dni + " - Intento: " + str(actualTry + 1))
             isCaptchaNumberOk, result = scrapingOneDocument(browser, dni)
             if isCaptchaNumberOk:
                 browser.quit()
-                return None
+                return dni
             else:
                 print("Fallo DNI: " + dni)
 
         browser.quit()
         with open(outputFileDNIsToReSearch, 'a') as f:
             f.write(dni + '\n')
-            return dni
+            return None
     except BanException:
         browser.quit()
         raise BanException()
@@ -413,14 +414,14 @@ def processWork(dni):
     except: # If error, delete this proxy and find another one
         del proxies[proxy_index]
         print('Proxy ' + proxy['ip'] + ':' + proxy['port'] + ' deleted.')
-        return dni
+        return None
 
-    return None
+    return dni
 
 
 
 def main():
-    filename = 'TOTAL_DNIS_7.txt'
+    filename = 'TOTAL_DNIS_20.txt'
     dnis = readFile(filename)
     #print(dnis)
 
@@ -434,15 +435,24 @@ def main():
     #with ThreadPoolExecutor(max_workers=1) as executor:
     #    futures = [executor.submit(downloader, dni) for dni in dnis]
 
-    with multiprocessing.Pool(36) as p:
-        while dnis:
-            dnis = set(p.map(processWork,dnis))
-            if None in dnis:
-                dnis.remove(None)
-            dnis = list(dnis)
 
-            os.system('pkill firefox')
-            os.system('pkill geckodriver')
+    iterationMultiprocessing = 1
+    with multiprocessing.Pool(24) as p:
+
+        print("iterationMultiprocessing: "+ str(iterationMultiprocessing))
+        dnisToScrap = dnis[:200]
+
+        dnisScraped = set(p.map(processWork,dnisToScrap))
+        if None in dnisScraped:
+            dnisScraped.remove(None)
+
+        dnis = list(set(dnis).difference(dnisScraped))
+
+        os.system('pkill firefox')
+        os.system('pkill geckodriver')
+
+        sleep((iterationMultiprocessing % 10) * 60)
+        iterationMultiprocessing += 1
 
 
     t1 = time.time()
