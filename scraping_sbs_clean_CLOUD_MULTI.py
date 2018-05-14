@@ -397,9 +397,11 @@ def downloader(dni,proxy):
             f.write(dni + '\n')
             return None
     except BanException:
+        print("Unexpected error:", sys.exc_info()[0])
         browser.quit()
         raise BanException()
     except:
+        print("Unexpected error:", sys.exc_info()[0])
         browser.quit()
 
 
@@ -421,12 +423,13 @@ def processWork(dni):
 
 
 def main():
-    filename = 'TOTAL_DNIS_20.txt'
+    filename = 'TOTAL_DNIS_21.txt'
     dnis = readFile(filename)
     #print(dnis)
 
-    #dnis = dnis[10]
+    midIndex = int(len(dnis)/2)
 
+    dnis = dnis[midIndex:]
 
     getProxies()
 
