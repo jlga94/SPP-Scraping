@@ -96,6 +96,8 @@ def getProxies_2():
     browser.find_element_by_xpath("//select[@name='proxylisttable_length']/option[text()='80']").click()
 
     maxPage = 4
+    global proxies
+
     for i in range(maxPage):
         soup = BeautifulSoup(browser.page_source, 'html.parser')
         proxies_table = soup.find(id='proxylisttable')
@@ -112,6 +114,8 @@ def getProxies_2():
 
     browser.quit()
 
+    middle = int(len(proxies)/2)
+    proxies = proxies[:middle]
 
 
 def random_proxy():
@@ -463,7 +467,7 @@ def processWork(dni):
 
 
 def main():
-    filename = 'TOTAL_DNIS_22.txt'
+    filename = 'TOTAL_DNIS_23.txt'
     dnis = readFile(filename)
     #print(dnis)
 
