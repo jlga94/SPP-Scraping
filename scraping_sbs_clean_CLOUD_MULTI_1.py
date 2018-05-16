@@ -25,13 +25,13 @@ from pyvirtualdisplay import Display
 
 from selenium.webdriver.common.proxy import *
 from urllib.request import Request, urlopen
-from fake_useragent import UserAgent
+#from fake_useragent import UserAgent
 import random
 
 import multiprocessing
 from functools import partial
 
-ua = UserAgent() # From here we generate a random user agent
+#ua = UserAgent() # From here we generate a random user agent
 proxies = [] # Will contain proxies [ip, port]
 
 browser = None
@@ -56,7 +56,7 @@ class BanException(Exception):
     def __init__(self):
         Exception.__init__(self,"IP baneada")
 
-
+'''
 def getProxies():
     # Retrieve latest proxies
     proxies_req = Request('https://www.sslproxies.org/')
@@ -73,6 +73,7 @@ def getProxies():
         'ip':   row.find_all('td')[0].string,
         'port': row.find_all('td')[1].string
       })
+'''
 
 def getProxies_2():
     url = 'https://free-proxy-list.net/'
@@ -114,8 +115,9 @@ def getProxies_2():
 
     browser.quit()
 
-    middle = int(len(proxies)/2)
-    proxies = proxies[:middle]
+    #middle = int(len(proxies)/2)
+    #proxies = proxies[:middle]
+    proxies = proxies[0::2]
 
 
 def random_proxy():
@@ -484,24 +486,24 @@ def main():
     #    futures = [executor.submit(downloader, dni) for dni in dnis]
 
 
+
     iterationMultiprocessing = 1
-    with multiprocessing.Pool(24) as p:
+    while dnis:
+        with multiprocessing.Pool(24) as p:
+            print("iterationMultiprocessing: "+ str(iterationMultiprocessing))
+            dnisToScrap = dnis[:200]
 
-    	while dnis:
-	        print("iterationMultiprocessing: "+ str(iterationMultiprocessing))
-	        dnisToScrap = dnis[:200]
+            dnisScraped = set(p.map(processWork,dnisToScrap))
+            if None in dnisScraped:
+                dnisScraped.remove(None)
 
-	        dnisScraped = set(p.map(processWork,dnisToScrap))
-	        if None in dnisScraped:
-	            dnisScraped.remove(None)
+            dnis = list(set(dnis).difference(dnisScraped))
 
-	        dnis = list(set(dnis).difference(dnisScraped))
+            os.system('pkill firefox')
+            os.system('pkill geckodriver')
 
-	        os.system('pkill firefox')
-	        os.system('pkill geckodriver')
-
-	        sleep((iterationMultiprocessing % 10) * 60)
-	        iterationMultiprocessing += 1
+            sleep((iterationMultiprocessing % 10) * 60)
+            iterationMultiprocessing += 1
 
 
     t1 = time.time()
